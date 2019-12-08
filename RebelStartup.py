@@ -1,60 +1,5 @@
-import sys
-class RebelStartup():
-   """
-   This class creates a decorator called @staticmethod that you can use to
-   define a function that can be called like a statement without parentheses
-
-   It replaces the sys.displayhook and sys.excepthook with custom functions
-   """
-   import os, readline, traceback, functools
-   
-   # Preserve original function pointers in case you want to reset them
-   displayhook = sys.displayhook
-   excepthook = sys.excepthook
-
-   class interactivefunction(object):
-      """
-      Decorator to make a function callable in the interactive session by turning it into a class
-      with a method called interactivefunction which will be called by the displayhook and excepthook functions
-      """
-      def __init__(self, f):
-         self.f = f
-
-      def __call__(self, *args, **kwargs):
-         self.f(*args, **kwargs)
-
-      interactivefunction = __call__
-
-   @staticmethod
-   def displayhook(whatever):
-      if hasattr(whatever, 'interactivefunction'):
-         return whatever.interactivefunction()
-      elif whatever:
-         print(whatever)
-
-   @staticmethod
-   def excepthook(exctype, value, tb):
-      import sys, inspect
-      if exctype is SyntaxError:
-         index = readline.get_current_history_length()
-         item = readline.get_history_item(index)
-         command = item.split()
-         app = sys.modules['__main__']
-         if command[0] == '!': ## run an OS command
-            import os
-            cmd = ' '.join(command[1:])
-            os.system(cmd)
-         elif command[0] in map(lambda x:x[0], inspect.getmembers(app)) and hasattr(eval(command[0]),'interactivefunction'):
-            try:
-               eval(command[0]).interactivefunction(*command[1:])
-            except:
-                  traceback.print_exception(exctype, value, tb)
-         else:
-              traceback.print_exception(exctype, value, tb)
-      else:
-         traceback.print_exception(exctype, value, tb)
-
-
+from RebelInteractive import *
+class RebelStartup:
    @staticmethod
    def hist(search = None, show = True):
       import readline
@@ -78,5 +23,142 @@ class RebelStartup():
       else:
          return ret
 
-sys.displayhook = RebelStartup.displayhook
-sys.excepthook = RebelStartup.excepthook
+@RebelInteractive.interactivefunction
+def clear():
+   from os import system
+   system('clear')
+
+@RebelInteractive.interactivefunction
+def quit():
+   """
+   Shortcut for quit()
+   """
+   import sys
+   sys.exit()
+ 
+q = quit
+
+@RebelInteractive.interactivefunction
+def reload(package):
+   """
+   Reload a module to get newest updates
+   """
+   from importlib import reload as rl
+   try:
+      rl(package)
+   except Exception as e:
+      print(e)
+
+@RebelInteractive.interactivefunction
+def ls(path = None):
+   """
+   Linux ls command
+   """
+   import os
+   if path:
+      os.system(f'ls {path}')
+   else:
+      os.system('ls')
+
+@RebelInteractive.interactivefunction
+def lsl(path = None):
+   """
+   Linux ls -l command
+   """
+   import os
+   if path:
+      os.system(f'ls -l {path}')
+   else:
+      os.system('ls -l')
+
+@RebelInteractive.interactivefunction
+def cp(source, dest = '.'):
+   """
+   Linux cp command
+   """
+   import os
+   os.system(f'cp {source} {dest}')
+
+@RebelInteractive.interactivefunction
+def cpr(source, dest = '.'):
+   """
+   Linux cp -r command
+   """
+   import os
+   os.system(f'cp {source} {dest}')
+
+@RebelInteractive.interactivefunction
+def rm(path):
+   """
+   Linux rm command
+   """
+   import os
+   os.system(f'rm {path}')
+
+@RebelInteractive.interactivefunction
+def rmr(path):
+   """
+   Linux rm -r command
+   """
+   import os
+   os.system(f'rm -r {path}')
+
+@RebelInteractive.interactivefunction
+def mv(source, dest = '.'):
+   """
+   Linux mv command
+   """
+   import os
+   os.system(f'mv {source} {dest}')
+
+@RebelInteractive.interactivefunction
+def cat(path):
+   """
+   Linux cat command
+   """
+   import os
+   os.system(f'cat {path}')
+
+@RebelInteractive.interactivefunction
+def hist(search = None):
+   """
+   Display history with optional filter pattern
+   """
+   return RebelInteractive.hist(search = search, show = True)
+
+@RebelInteractive.interactivefunction
+def mc(path = None):
+   """
+   Invoke interactive mc file manager
+   """
+   import os
+   os.system(f'mc {path}')
+
+@RebelInteractive.interactivefunction
+def code(file = None, search = None):
+   """
+   Edit a file with VS-Code
+   code --> edit hist.py
+   code filename --> edit filename
+   code hist --> edit hist.py
+   code hist pattern --> edit hist.py that meets pattern
+   """
+   from os import system
+   def hist_code(search = None):
+      lines = RebelInteractive.hist(search, False)
+      with open('hist.py', 'w') as f:
+         f.writelines(map(lambda x: x + '\n', lines))
+         system('code hist.py')
+
+   if file:
+      if file.lower() == 'hist':
+         hist_code(search)
+      else:
+         system(f'code {file}')
+   else:
+      hist_code()
+
+
+print('Loaded Startup module')
+
+
